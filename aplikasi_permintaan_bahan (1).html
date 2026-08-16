@@ -1,0 +1,1694 @@
+<!DOCTYPE html>
+<html lang="id" class="h-full bg-slate-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplikasi Permintaan & Penerimaan Bahan - Restoran</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Font Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        
+        /* Custom Print Styling */
+        @media print {
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            body { background: white !important; font-size: 11pt; color: black !important; }
+            .print-container { width: 100% !important; margin: 0 !important; padding: 0 !important; shadow: none !important; border: none !important; }
+        }
+        
+        /* Custom Scrollbars */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="flex flex-col min-h-full bg-slate-100 text-slate-800 antialiased selection:bg-indigo-500 selection:text-white">
+
+    <header class="bg-indigo-700 text-white shadow-md no-print">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row justify-between items-center gap-3">
+            <div class="flex items-center space-x-3">
+                <div class="bg-white/10 p-2.5 rounded-xl border border-white/20">
+                    <i class="fa-solid fa-boxes-packing text-2xl text-amber-300"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight">Aplikasi Permintaan & Penerimaan Bahan</h1>
+                    <p class="text-xs text-indigo-200">Sistem Pengajuan & Pencatatan Stok Dapur & Outlet</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-2 text-xs bg-indigo-800/60 px-3 py-2 rounded-lg border border-indigo-600">
+                <i class="fa-solid fa-store text-amber-300"></i>
+                <span class="font-medium">4 Area Terintegrasi: DU | Gudang | Outlet Faisal | Outlet BTP</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-grow w-full">
+        <!-- Toast Notification Container -->
+        <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 no-print"></div>
+
+        <!-- Navigation Tabs -->
+        <div class="flex border-b border-slate-200 mb-6 no-print space-x-2 overflow-x-auto pb-1">
+            <button onclick="switchTab('form')" id="tab-btn-form" class="py-2.5 px-4 font-semibold text-sm rounded-t-lg transition flex items-center gap-2 bg-white text-indigo-600 border-t border-x border-slate-200 border-b-2 border-b-indigo-600 shadow-sm whitespace-nowrap">
+                <i class="fa-solid fa-paper-plane text-indigo-500"></i> Form Permintaan (Keluar)
+            </button>
+            <button onclick="switchTab('masuk')" id="tab-btn-masuk" class="py-2.5 px-4 font-semibold text-sm rounded-t-lg transition flex items-center gap-2 text-slate-500 hover:text-emerald-600 hover:bg-slate-100 whitespace-nowrap">
+                <i class="fa-solid fa-boxes-stacked text-emerald-500"></i> Form Bahan Masuk
+            </button>
+            <button onclick="switchTab('buffer')" id="tab-btn-buffer" class="py-2.5 px-4 font-semibold text-sm rounded-t-lg transition flex items-center gap-2 text-slate-500 hover:text-amber-600 hover:bg-slate-100 whitespace-nowrap">
+                <i class="fa-solid fa-shield-halved text-amber-500"></i> Buffer Stok (<span id="bufferCount">0</span>)
+            </button>
+            <button onclick="switchTab('history')" id="tab-btn-history" class="py-2.5 px-4 font-semibold text-sm rounded-t-lg transition flex items-center gap-2 text-slate-500 hover:text-indigo-600 hover:bg-slate-100 whitespace-nowrap">
+                <i class="fa-solid fa-clock-rotate-left"></i> Riwayat Dokumen (<span id="historyCount">0</span>)
+            </button>
+            <button onclick="openCatalogModal()" class="py-2.5 px-4 font-semibold text-sm rounded-t-lg transition flex items-center gap-2 text-slate-500 hover:text-indigo-600 hover:bg-slate-100 ml-auto whitespace-nowrap">
+                <i class="fa-solid fa-book-open text-amber-500"></i> Katalog Master
+            </button>
+        </div>
+
+        <section id="section-form" class="space-y-6">
+            <form id="requisitionForm" onsubmit="handleFormSubmit(event)" class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="bg-indigo-50/70 border-b border-indigo-100 p-5 sm:p-6 flex flex-col md:flex-row justify-between md:items-center gap-4">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                            <i class="fa-solid fa-file-pen text-indigo-600"></i> Form Permintaan Bahan (Keluar)
+                        </h2>
+                        <p class="text-xs text-slate-500 mt-1">Buat dokumen pengajuan bahan dari area lokasi ke supplier, dapur utama, atau gudang.</p>
+                    </div>
+                    <div class="flex items-center gap-2 bg-indigo-100/80 border border-indigo-200 px-3 py-1.5 rounded-lg text-xs font-semibold text-indigo-900">
+                        <i class="fa-solid fa-hashtag"></i> No. Dokumen: <span id="docNumberDisplay" class="font-mono font-bold text-indigo-950">REQ-2026-0001</span>
+                    </div>
+                </div>
+
+                <div class="p-5 sm:p-6 space-y-6">
+                    <!-- Form Header Info -->
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 bg-slate-50/80 p-4 rounded-xl border border-slate-200">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                                Area Pemohon <span class="text-rose-500">*</span>
+                            </label>
+                            <select id="areaPemohon" required onchange="handleAreaChange()" class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-800 font-medium focus:ring-2 focus:ring-indigo-500 transition">
+                                <option value="">-- Pilih Area --</option>
+                                <option value="Dapur Utama">Dapur Utama (DU)</option>
+                                <option value="Gudang">Gudang Logistik</option>
+                                <option value="Outlet Faisal">Outlet Faisal</option>
+                                <option value="Outlet BTP">Outlet BTP</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                                Tujuan Permintaan <span class="text-rose-500">*</span>
+                            </label>
+                            <select id="tujuanPermintaan" required class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-800 font-medium focus:ring-2 focus:ring-indigo-500">
+                                <option value="Supplier">Supplier / Pemasok</option>
+                                <option value="Dapur Utama">Dapur Utama (Bahan Mentah/Setengah Jadi)</option>
+                                <option value="Gudang Logistik">Gudang Logistik (Kemasan & Ops)</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                                Tanggal Permintaan <span class="text-rose-500">*</span>
+                            </label>
+                            <input type="date" id="tanggalPermintaan" required class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium focus:ring-2 focus:ring-indigo-500">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                                Penanggung Jawab / Pemohon <span class="text-rose-500">*</span>
+                            </label>
+                            <input type="text" id="namaPemohon" required placeholder="Nama Lengkap" class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500">
+                        </div>
+                    </div>
+
+                    <!-- Items Table -->
+                    <div class="space-y-3">
+                        <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-2">
+                            <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                                <i class="fa-solid fa-list-check text-indigo-600"></i> Rincian Bahan yang Diminta (<span id="itemRowCount">1</span>)
+                            </h3>
+                            <div class="flex items-center gap-2">
+                                <button type="button" onclick="openCatalogModal()" class="text-xs bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 font-semibold px-3 py-1.5 rounded-lg transition flex items-center gap-1.5">
+                                    <i class="fa-solid fa-magnifying-glass"></i> Pilih Dari Katalog
+                                </button>
+                                <button type="button" onclick="addItemRow()" class="text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-3 py-1.5 rounded-lg transition flex items-center gap-1.5">
+                                    <i class="fa-solid fa-plus"></i> Tambah Baris
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="overflow-x-auto rounded-xl border border-slate-200 min-h-[220px] pb-12">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-slate-100 text-slate-700 text-xs font-bold uppercase tracking-wider border-b border-slate-200">
+                                        <th class="p-3 w-12 text-center">#</th>
+                                        <th class="p-3 min-w-[280px]">Nama Bahan / Barang</th>
+                                        <th class="p-3 w-32">Jumlah</th>
+                                        <th class="p-3 w-36">Satuan</th>
+                                        <th class="p-3 min-w-[200px]">Catatan / Keterangan</th>
+                                        <th class="p-3 w-14 text-center">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="itemsTableBody" class="divide-y divide-slate-200 text-sm">
+                                    <!-- Dynamic rows inserted here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Footer Notes -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                            Catatan Tambahan Permintaan
+                        </label>
+                        <textarea id="catatanForm" rows="2" placeholder="Catatan opsional (contoh: Kebutuhan mendesak untuk event pagi, pengiriman sebelum jam 08.00)..." class="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500"></textarea>
+                    </div>
+                </div>
+
+                <div class="bg-slate-50 border-t border-slate-200 p-4 sm:p-6 flex justify-end gap-3">
+                    <button type="button" onclick="resetForm()" class="px-4 py-2 text-xs font-bold text-slate-600 bg-white border border-slate-300 hover:bg-slate-100 rounded-xl transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-rotate-left"></i> Reset Form
+                    </button>
+                    <button type="submit" class="px-5 py-2.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md hover:shadow-lg transition flex items-center gap-2">
+                        <i class="fa-solid fa-paper-plane"></i> Simpan & Buat Permintaan
+                    </button>
+                </div>
+            </form>
+        </section>
+
+        <section id="section-masuk" class="hidden space-y-6">
+            <form id="incomingForm" onsubmit="handleInFormSubmit(event)" class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="bg-emerald-50/70 border-b border-emerald-100 p-5 sm:p-6 flex flex-col md:flex-row justify-between md:items-center gap-4">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                            <i class="fa-solid fa-boxes-packing text-emerald-600"></i> Form Penerimaan Bahan Masuk
+                        </h2>
+                        <p class="text-xs text-slate-500 mt-1">Catat penerimaan bahan baku dari supplier, Dapur Utama, atau Gudang Logistik.</p>
+                    </div>
+                    <div class="flex items-center gap-2 bg-emerald-100/80 border border-emerald-200 px-3 py-1.5 rounded-lg text-xs font-semibold text-emerald-800">
+                        <i class="fa-solid fa-hashtag"></i> No. Bukti Masuk: <span id="inDocNumberDisplay" class="font-mono font-bold text-emerald-950">IN-2026-0001</span>
+                    </div>
+                </div>
+
+                <div class="p-5 sm:p-6 space-y-6">
+                    <!-- Form Header Info Bahan Masuk -->
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 bg-slate-50/80 p-4 rounded-xl border border-slate-200">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                                Area Penerima <span class="text-rose-500">*</span>
+                            </label>
+                            <select id="inAreaPenerima" required class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-800 font-medium focus:ring-2 focus:ring-emerald-500 transition">
+                                <option value="">-- Pilih Area --</option>
+                                <option value="Dapur Utama">Dapur Utama (DU)</option>
+                                <option value="Gudang">Gudang Logistik</option>
+                                <option value="Outlet Faisal">Outlet Faisal</option>
+                                <option value="Outlet BTP">Outlet BTP</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                                Sumber / Asal Bahan <span class="text-rose-500">*</span>
+                            </label>
+                            <select id="inSumberBahan" required class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-800 font-medium focus:ring-2 focus:ring-emerald-500">
+                                <option value="Supplier">Supplier / Pemasok Luar</option>
+                                <option value="Dapur Utama">Dapur Utama (DU)</option>
+                                <option value="Gudang Logistik">Gudang Logistik</option>
+                                <option value="Lainnya">Lainnya / Retur</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                                No. Surat Jalan / Ref
+                            </label>
+                            <input type="text" id="inNoRef" placeholder="Contoh: SJ-88912 / REQ-2026-0001" class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                                Tanggal Penerimaan <span class="text-rose-500">*</span>
+                            </label>
+                            <input type="date" id="inTanggalMasuk" required class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium focus:ring-2 focus:ring-emerald-500">
+                        </div>
+                    </div>
+
+                    <!-- Items Table Bahan Masuk -->
+                    <div class="space-y-3">
+                        <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-2">
+                            <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                                <i class="fa-solid fa-list-check text-emerald-600"></i> Rincian Bahan Masuk (<span id="inItemRowCount">1</span>)
+                            </h3>
+                            <div class="flex items-center gap-2">
+                                <button type="button" onclick="openCatalogModal()" class="text-xs bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 font-semibold px-3 py-1.5 rounded-lg transition flex items-center gap-1.5">
+                                    <i class="fa-solid fa-magnifying-glass"></i> Pilih Dari Katalog
+                                </button>
+                                <button type="button" onclick="addInItemRow()" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-3 py-1.5 rounded-lg transition flex items-center gap-1.5">
+                                    <i class="fa-solid fa-plus"></i> Tambah Baris
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="overflow-x-auto rounded-xl border border-slate-200 min-h-[220px] pb-12">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-slate-100 text-slate-700 text-xs font-bold uppercase tracking-wider border-b border-slate-200">
+                                        <th class="p-3 w-12 text-center">#</th>
+                                        <th class="p-3 min-w-[240px]">Nama Bahan / Barang</th>
+                                        <th class="p-3 w-28">Jumlah Masuk</th>
+                                        <th class="p-3 w-28">Satuan</th>
+                                        <th class="p-3 w-40">Kondisi</th>
+                                        <th class="p-3 min-w-[160px]">Catatan / Keterangan</th>
+                                        <th class="p-3 w-14 text-center">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="inItemsTableBody" class="divide-y divide-slate-200 text-sm">
+                                    <!-- Dynamic incoming rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Footer Info Penerima -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                                Catatan Penerimaan
+                            </label>
+                            <textarea id="inCatatan" rows="2" placeholder="Keterangan tambahan penerimaan barang (contoh: kondisi kemasan rapi, barang dingin sesuai)..." class="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-emerald-500"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                                Nama Penerima / Petugas Stok <span class="text-rose-500">*</span>
+                            </label>
+                            <input type="text" id="inNamaPenerima" required placeholder="Nama Lengkap Petugas Penerima" class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-slate-50 border-t border-slate-200 p-4 sm:p-6 flex justify-end gap-3">
+                    <button type="button" onclick="resetInForm()" class="px-4 py-2 text-xs font-bold text-slate-600 bg-white border border-slate-300 hover:bg-slate-100 rounded-xl transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-rotate-left"></i> Reset Form
+                    </button>
+                    <button type="submit" class="px-5 py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-md hover:shadow-lg transition flex items-center gap-2">
+                        <i class="fa-solid fa-boxes-packing"></i> Simpan & Buat Bukti Penerimaan
+                    </button>
+                </div>
+            </form>
+        </section>
+
+        <section id="section-buffer" class="hidden space-y-6">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 sm:p-6 space-y-5">
+                <div class="flex flex-col md:flex-row justify-between md:items-center gap-4 border-b border-slate-100 pb-4">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                            <i class="fa-solid fa-shield-halved text-amber-500"></i> Data Master Buffer Stok Restoran
+                        </h2>
+                        <p class="text-xs text-slate-500 mt-0.5">Panduan batas stok minimum & maksimum per area lokasi (DU, Gudang, Outlet Faisal, Outlet BTP)</p>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <select id="bufferAreaFilter" onchange="renderBufferTable()" class="text-xs font-semibold border border-slate-300 rounded-xl px-3 py-2 bg-slate-50 text-slate-700 focus:ring-2 focus:ring-amber-500">
+                            <option value="ALL">Semua Area (DU, Gudang & Outlet)</option>
+                            <option value="Dapur Utama">Dapur Utama (DU)</option>
+                            <option value="Gudang">Gudang Logistik</option>
+                            <option value="Outlet Faisal">Outlet Faisal</option>
+                            <option value="Outlet BTP">Outlet BTP</option>
+                        </select>
+                        <input type="text" id="bufferSearch" oninput="renderBufferTable()" placeholder="Cari nama bahan buffer stok..." class="text-xs border border-slate-300 rounded-xl px-3 py-2 w-56 focus:ring-2 focus:ring-amber-500">
+                    </div>
+                </div>
+
+                <!-- Buffer Stock Summary Cards -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                    <div class="bg-amber-50/70 border border-amber-200 rounded-xl p-3.5">
+                        <span class="text-amber-800 font-medium block">Total Aturan Buffer</span>
+                        <span class="text-2xl font-black text-amber-900 mt-1 block" id="statBufferTotal">0</span>
+                    </div>
+                    <div class="bg-indigo-50/70 border border-indigo-200 rounded-xl p-3.5">
+                        <span class="text-indigo-800 font-medium block">Aturan Dapur Utama</span>
+                        <span class="text-2xl font-black text-indigo-900 mt-1 block" id="statBufferDU">0</span>
+                    </div>
+                    <div class="bg-emerald-50/70 border border-emerald-200 rounded-xl p-3.5">
+                        <span class="text-emerald-800 font-medium block">Aturan Gudang Logistik</span>
+                        <span class="text-2xl font-black text-emerald-900 mt-1 block" id="statBufferGudang">0</span>
+                    </div>
+                    <div class="bg-sky-50/70 border border-sky-200 rounded-xl p-3.5">
+                        <span class="text-sky-800 font-medium block">Aturan Per Outlet</span>
+                        <span class="text-2xl font-black text-sky-900 mt-1 block" id="statBufferOutlet">0</span>
+                    </div>
+                </div>
+
+                <!-- Buffer Stock Table -->
+                <div class="overflow-x-auto rounded-xl border border-slate-200">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-700 text-xs font-bold uppercase tracking-wider border-b border-slate-200">
+                                <th class="p-3 w-12 text-center">#</th>
+                                <th class="p-3">Nama Bahan</th>
+                                <th class="p-3 w-36">Area Lokasi</th>
+                                <th class="p-3 w-28 text-center">Satuan</th>
+                                <th class="p-3 w-28 text-center">Min (Batas Bawah)</th>
+                                <th class="p-3 w-28 text-center">Max (Batas Atas)</th>
+                                <th class="p-3 w-36 text-center">Aksi Cepat</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bufferTableBody" class="divide-y divide-slate-200 text-sm">
+                            <!-- Dynamic Buffer Stock Items -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <section id="section-history" class="hidden space-y-4">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+                <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-3 mb-4">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-800">Riwayat Dokumen Bahan</h2>
+                        <p class="text-xs text-slate-500">Daftar arsip permintaan (keluar) dan penerimaan (masuk).</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <select id="historyTypeFilter" onchange="renderHistoryTable()" class="text-xs border border-slate-300 rounded-lg px-3 py-2 font-semibold bg-slate-50 text-slate-700 focus:ring-2 focus:ring-indigo-500">
+                            <option value="ALL">Semua Jenis Dokumen</option>
+                            <option value="REQ">Dokumen Permintaan (Keluar)</option>
+                            <option value="IN">Dokumen Penerimaan (Masuk)</option>
+                        </select>
+                        <input type="text" id="historySearch" oninput="renderHistoryTable()" placeholder="Cari No. Dokumen / Area / Nama..." class="text-xs border border-slate-300 rounded-lg px-3 py-2 w-56 focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto rounded-xl border border-slate-200">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-700 text-xs font-bold uppercase tracking-wider border-b border-slate-200">
+                                <th class="p-3">Jenis</th>
+                                <th class="p-3">No. Dokumen</th>
+                                <th class="p-3">Tanggal</th>
+                                <th class="p-3">Area</th>
+                                <th class="p-3">Sumber / Tujuan</th>
+                                <th class="p-3">Item</th>
+                                <th class="p-3">Penanggung Jawab</th>
+                                <th class="p-3 text-center">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyTableBody" class="divide-y divide-slate-200 text-sm">
+                            <!-- Dynamic history rows -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Catalog Modal -->
+    <div id="catalogModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-3xl max-h-[85vh] flex flex-col overflow-hidden">
+            <div class="p-4 sm:p-5 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
+                <div>
+                    <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-book-open text-amber-500"></i> Katalog Master Bahan Restoran
+                    </h3>
+                    <p class="text-xs text-slate-500">Pilih bahan baku dari database gabungan (DU, Gudang & Outlet)</p>
+                </div>
+                <button onclick="closeCatalogModal()" class="text-slate-400 hover:text-slate-600 p-2 rounded-lg hover:bg-slate-200 transition">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <div class="p-4 border-b border-slate-100 bg-white flex gap-2">
+                <div class="relative flex-1">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-400 text-xs"></i>
+                    <input type="text" id="catalogSearch" oninput="filterCatalog()" placeholder="Cari nama bahan (cth: Ayam, Telur, Bumbu, Plastik)..." class="w-full pl-9 pr-3 py-2 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                </div>
+            </div>
+
+            <div class="p-4 overflow-y-auto flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs" id="catalogGrid">
+                <!-- Dynamic Catalog Items -->
+            </div>
+
+            <div class="p-4 border-t border-slate-200 bg-slate-50 text-right">
+                <button onclick="closeCatalogModal()" class="px-4 py-2 text-xs font-bold text-slate-600 bg-white border border-slate-300 hover:bg-slate-100 rounded-lg transition">
+                    Tutup Katalog
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Print / Pratinjau Modal -->
+    <div id="printModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 overflow-y-auto" onclick="handleModalBackdropClick(event)">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-2xl overflow-hidden my-8" onclick="event.stopPropagation()">
+            <!-- Header Modal Navigasi Kembali -->
+            <div class="bg-slate-800 text-white p-4 flex justify-between items-center no-print">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-file-invoice text-amber-400"></i>
+                    <span class="font-bold text-sm">Pratinjau Dokumen Resmi</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="window.print()" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow">
+                        <i class="fa-solid fa-print"></i> Cetak / PDF
+                    </button>
+                    <button onclick="closePrintModal()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 border border-slate-500">
+                        <i class="fa-solid fa-arrow-left"></i> Kembali ke Aplikasi
+                    </button>
+                </div>
+            </div>
+
+            <!-- Content Area Dokumen -->
+            <div id="printVoucherContent" class="p-8 space-y-6 text-slate-800 bg-white print-container">
+                <!-- Dynamically generated document voucher -->
+            </div>
+
+            <!-- Footer Modal Navigasi Kembali -->
+            <div class="bg-slate-100 border-t border-slate-200 p-4 flex justify-between items-center no-print">
+                <span class="text-xs text-slate-500">Tekan <kbd class="px-1.5 py-0.5 bg-white border rounded text-[10px] font-mono shadow-sm">ESC</kbd> untuk menutup</span>
+                <button onclick="closePrintModal()" class="px-5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-sm">
+                    <i class="fa-solid fa-arrow-left"></i> Kembali ke Aplikasi
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden Container for Direct Browser Printing -->
+    <div id="printableArea" class="hidden print-only"></div>
+
+    <script>
+        // Combined Master Data (APS DU - List Sisa, Sheet10, & Sheet11)
+        const sampleCatalog = [
+            // Sheet 11 Items
+            { name: "AYAM CINCANG", unit: "Bks @1Kg" },
+            { name: "TELUR AYAM", unit: "Rak @30butir" },
+            { name: "TELUR AYAM KAMPUNG", unit: "Rak @30butir" },
+            { name: "TELUR KAMPUNG 1/2 MATANG", unit: "Butir" },
+            { name: "BUBUR KETAN", unit: "Bks @3L" },
+            { name: "BAWANG MERAH HALUS", unit: "Bks @500gr" },
+            { name: "BAWANG PUTIH HALUS", unit: "Bks @500gr" },
+            { name: "JAHE KUPAS", unit: "Gr" },
+            { name: "DAUN SOP", unit: "Gr" },
+            { name: "DAUN BAWANG", unit: "Gr" },
+            { name: "DAUN SALAM", unit: "Tusuk @8lembar" },
+            { name: "JERUK NIPIS HIJAU", unit: "Gr" },
+            { name: "HATI AMPELA MARINASI", unit: "Bks @5pcs" },
+            { name: "BUMBU BUBUR", unit: "Bks@500gr" },
+            { name: "BUMBU CIRENG", unit: "Bks@500gr" },
+            { name: "BUMBU KUAH BATAGOR", unit: "Bks@500gr" },
+            { name: "SAMBAL REBUS", unit: "Bks @1Kg" },
+            { name: "SAMBAL DIMSUM", unit: "Bks @1Kg" },
+            { name: "SAMBAL KAKU", unit: "Bks @1400gr" },
+            { name: "ESPRESSO", unit: "mL" },
+            { name: "DIMSUM FROZEN", unit: "Bks @126biji" },
+            { name: "BAKSO FROZEN", unit: "Bks@100biji" },
+            { name: "PANGSIT FROZEN", unit: "Mika@50biji" },
+            { name: "TAHU FROZEN", unit: "Bks@100biji" },
+            { name: "ROTI KUKUS", unit: "Bks @5pcs" },
+            { name: "SELAI KAYA PANDAN", unit: "Bks @500gr" },
+
+            // List Sisa Items
+            { name: "AYAM KUPAS GILING KASAR", unit: "Gr" },
+            { name: "AYAM KUPAS GILING HALUS", unit: "Gr" },
+            { name: "HATI-AMPELA", unit: "Gr" },
+            { name: "KULIT DIMSUM", unit: "Bks" },
+            { name: "BAWANG MERAH KUPAS", unit: "Gr" },
+            { name: "BAWANG PUTIH KUPAS", unit: "Gr" },
+            { name: "LOMBOK KECIL", unit: "Gr" },
+            { name: "LOMBOK KERITING", unit: "Gr" },
+            { name: "SEREH GILING", unit: "Gr" },
+            { name: "KEMIRI", unit: "Gr" },
+            { name: "CUKA", unit: "Botol @650gr" },
+            { name: "SAUS TIRAM", unit: "Botol @1Liter" },
+            { name: "SAUS TOMAT", unit: "Bks" },
+            { name: "SAUS SAMBAL", unit: "Bks" },
+            { name: "KECAP ASIN", unit: "Botol @620ml" },
+            { name: "KECAP INGGRIS", unit: "Botol @620gr" },
+            { name: "MINYAK WIJEN", unit: "Botol @620gr" },
+            { name: "TEPUNG TAPIOKA", unit: "Bks @1Kg" },
+            { name: "TEPUNG TERIGU", unit: "Bks @1Kg" },
+            { name: "TEPUNG MAIZENA", unit: "Bks @1Kg" },
+            { name: "GARAM HALUS", unit: "Bks@500gr" },
+            { name: "MASAKO SAPI", unit: "Bks@1Kg" },
+            { name: "MASAKO AYAM", unit: "Bks@1Kg" },
+            { name: "VITSIN", unit: "Bks@1Kg" },
+            { name: "BUMBU MARINASI", unit: "Bks@500gr" },
+            { name: "MINYAK GORENG", unit: "Bks @1Liter" },
+            { name: "ISOLASI KERTAS", unit: "Roll @12pcs" },
+
+            // Sheet 10 Items
+            { name: "TELUR ASIN", unit: "Rak @30butir" },
+            { name: "BERAS", unit: "Karung @25Liter" },
+            { name: "BAWANG GORENG", unit: "Bks @1Kg" },
+            { name: "KECAP MANIS", unit: "Bks @1Liter" },
+            { name: "GULA PASIR", unit: "Bks @1Kg" },
+            { name: "LADAKU", unit: "Bks @500gr" },
+            { name: "SELAI KAYA", unit: "Botol @350gr" },
+            { name: "SUSU CAIR", unit: "Kotak @950ml" },
+            { name: "AREN CAIR", unit: "Botol @1L" },
+            { name: "SKM", unit: "Kaleng @490gr" },
+            { name: "CREAMER", unit: "Kotak @500gr" },
+            { name: "MAXTEA", unit: "Bks @350gr" },
+            { name: "CHAMPION COKLAT", unit: "Bks @300gr" },
+            { name: "TEH TONGJIE", unit: "Kotak @15pcs" },
+            { name: "TEH GM", unit: "Bks @250gr" },
+            { name: "AIR MINERAL", unit: "Dos @24botol" },
+            { name: "ES CUP", unit: "Bks @50pcs" },
+            { name: "PAPERCUP", unit: "Bks @50pcs" },
+            { name: "PAPERBAG", unit: "Bks @100Pcs" },
+            { name: "PAPERBOWL", unit: "Bks @25pcs" },
+            { name: "PIRING DIMSUM", unit: "Bks@10pcs" },
+            { name: "PAPERBOX", unit: "Ikat @1000pcs" },
+            { name: "PAPERTRAY", unit: "Ikat @1000pcs" },
+            { name: "PLASTIK UKURAN S", unit: "Bks @100pcs" },
+            { name: "PLASTIK UKURAN M", unit: "Bks @100pcs" },
+            { name: "PLASTIK UKURAN L", unit: "Bks @100pcs" },
+            { name: "PLASTIK UKURAN 20", unit: "Bks @30pcs" },
+            { name: "PLASTIK UKURAN 25", unit: "Bks @20pcs" },
+            { name: "SEDOTAN", unit: "Bks @250pcs" },
+            { name: "SEDOTAN PANAS", unit: "Bks @500pcs" },
+            { name: "SUMPIT", unit: "Bks @100psg" },
+            { name: "SENDOK PLASTIK", unit: "Bks @100psg" },
+            { name: "GARPU PLASTIK", unit: "Bks @100psg" },
+            { name: "CUP SAMBAL", unit: "Bks @50pcs" },
+            { name: "TUSUK SATE", unit: "Bks @100pcs" },
+            { name: "TISSUE", unit: "Bal @10pcs" },
+            { name: "HANDGLOVES", unit: "Box @100pcs" },
+            { name: "HANDSCOON", unit: "Box @100pcs" },
+            { name: "SUNLIGHT", unit: "Pcs" },
+            { name: "SUPERPELL", unit: "Bks" },
+            { name: "KERTAS NASI", unit: "Bks @100pcs" }
+        ];
+
+        const bufferStockMaster = {
+            "Dapur Utama": [
+                { name: "AYAM GILING KASAR", unit: "Kg", min: 5, max: 10 },
+                { name: "AYAM GILING HALUS", unit: "Kg", min: 3, max: 8 },
+                { name: "HATI AMPELA", unit: "Kg", min: 3, max: 8 },
+                { name: "AYAM CINCANG", unit: "Bks", min: 5, max: 10 },
+                { name: "KULIT DIMSUM", unit: "Bks", min: 2, max: 5 },
+                { name: "BAWANG MERAH KUPAS", unit: "Kg", min: 4, max: 8 },
+                { name: "BAWANG PUTIH KUPAS", unit: "Kg", min: 4, max: 8 },
+                { name: "BAWANG MERAH HALUS", unit: "Kg", min: 4, max: 8 },
+                { name: "BAWANG PUTIH HALUS", unit: "Kg", min: 4, max: 8 },
+                { name: "LOMBOK KECIL", unit: "Kg", min: 5, max: 10 },
+                { name: "LOMBOK KERITING", unit: "Kg", min: 3, max: 8 },
+                { name: "SEREH GILING", unit: "Kg", min: 3, max: 8 },
+                { name: "KEMIRI", unit: "Kg", min: 1, max: 3 },
+                { name: "KEMIRI SANGRAI", unit: "Kg", min: 1, max: 3 },
+                { name: "CUKA", unit: "Botol", min: 3, max: 8 },
+                { name: "SAUS TIRAM", unit: "Botol", min: 3, max: 8 },
+                { name: "SAUS TOMAT", unit: "Kg", min: 1, max: 3 },
+                { name: "SAUS SAMBAL", unit: "Kg", min: 1, max: 3 },
+                { name: "KECAP ASIN", unit: "Botol", min: 2, max: 5 },
+                { name: "KECAP INGGRIS", unit: "Botol", min: 2, max: 5 },
+                { name: "MINYAK WIJEN", unit: "Botol", min: 1, max: 3 },
+                { name: "TEPUNG TAPIOKA", unit: "Bks", min: 3, max: 8 },
+                { name: "TEPUNG TERIGU", unit: "Bks", min: 3, max: 8 },
+                { name: "TEPUNG MAIZENA", unit: "Bks", min: 2, max: 6 },
+                { name: "GARAM HALUS", unit: "Bks", min: 2, max: 6 },
+                { name: "MASAKO SAPI", unit: "Bks", min: 2, max: 6 },
+                { name: "MASAKO AYAM", unit: "Bks", min: 1, max: 3 },
+                { name: "VITSIN", unit: "Bks", min: 2, max: 6 },
+                { name: "HATI AMPELA MARINASI", unit: "Kg", min: 5, max: 10 },
+                { name: "BUMBU MARINASI", unit: "Kg", min: 5, max: 10 },
+                { name: "BUMBU BUBUR", unit: "Bks", min: 5, max: 10 },
+                { name: "BUMBU CIRENG", unit: "Bks", min: 3, max: 6 },
+                { name: "BUMBU KUAH BATAGOR", unit: "Bks", min: 1, max: 3 },
+                { name: "SAMBAL REBUS", unit: "Bks", min: 5, max: 10 },
+                { name: "SAMBAL DIMSUM", unit: "Bks", min: 2, max: 6 },
+                { name: "SAMBAL KAKU", unit: "Bks", min: 2, max: 6 },
+                { name: "DIMSUM FROZEN", unit: "Box", min: 3, max: 8 }
+            ],
+            "Gudang": [
+                { name: "TELUR AYAM", unit: "Rak", min: 4, max: 8 },
+                { name: "TELUR AYAM KAMPUNG", unit: "Rak", min: 2, max: 6 },
+                { name: "TELUR ASIN", unit: "Rak", min: 1, max: 3 },
+                { name: "BERAS", unit: "Liter", min: 1, max: 3 },
+                { name: "BUBUR KETAN", unit: "Bks", min: 3, max: 6 },
+                { name: "JAHE KUPAS", unit: "Kg", min: 1, max: 2 },
+                { name: "DAUN SOP", unit: "Kg", min: 1, max: 2 },
+                { name: "DAUN BAWANG", unit: "Kg", min: 1, max: 2 },
+                { name: "DAUN SALAM", unit: "Tusuk", min: 2, max: 4 },
+                { name: "JERUK NIPIS HIJAU", unit: "Kg", min: 1, max: 2 },
+                { name: "BAWANG GORENG", unit: "Kg", min: 3, max: 6 },
+                { name: "KECAP MANIS", unit: "Botol", min: 2, max: 4 },
+                { name: "GULA PASIR", unit: "Bks", min: 3, max: 5 },
+                { name: "LADAKU", unit: "Bks", min: 4, max: 8 },
+                { name: "ESPRESSO", unit: "Liter", min: 2, max: 3 },
+                { name: "BAKSO FROZEN", unit: "Bks", min: 2, max: 4 },
+                { name: "PANGSIT FROZEN", unit: "Mika", min: 2, max: 4 },
+                { name: "TAHU FROZEN", unit: "Bks", min: 2, max: 4 },
+                { name: "ROTI KUKUS", unit: "Bks", min: 10, max: 20 },
+                { name: "SELAI KAYA", unit: "Botol", min: 4, max: 8 },
+                { name: "SELAI KAYA PANDAN", unit: "Bks", min: 3, max: 6 },
+                { name: "SELAI THAITEA", unit: "Bks", min: 2, max: 4 },
+                { name: "SELAI COKLAT", unit: "Bks", min: 0, max: 0 },
+                { name: "SUSU CAIR", unit: "Kotak", min: 6, max: 12 },
+                { name: "AREN CAIR", unit: "Liter", min: 3, max: 6 },
+                { name: "SKM", unit: "Kaleng", min: 6, max: 12 },
+                { name: "CREAMER", unit: "Kotak", min: 3, max: 6 },
+                { name: "MAXTEA", unit: "Bks", min: 3, max: 6 },
+                { name: "CHAMPION COKLAT", unit: "Bks", min: 3, max: 6 },
+                { name: "TEH TONGJIE", unit: "Kotak", min: 5, max: 10 },
+                { name: "TEH GM", unit: "Bks", min: 2, max: 4 },
+                { name: "TEH BOTOL", unit: "Bks", min: 2, max: 4 },
+                { name: "AIR MINERAL", unit: "Ball", min: 5, max: 15 },
+                { name: "GULA SACHET", unit: "Bks", min: 3, max: 6 },
+                { name: "ES CUP", unit: "Bks", min: 10, max: 20 },
+                { name: "PAPERCUP", unit: "Bks", min: 5, max: 10 },
+                { name: "KEMASAN 1", unit: "Bks", min: 3, max: 6 },
+                { name: "KEMASAN 2", unit: "Bks", min: 3, max: 6 },
+                { name: "PLASTIK SEALER", unit: "Roll", min: 3, max: 6 },
+                { name: "PAPERBAG", unit: "Bks", min: 5, max: 12 },
+                { name: "PAPERBOWL", unit: "Bks", min: 6, max: 10 },
+                { name: "PIRING DIMSUM", unit: "Bks", min: 3, max: 10 },
+                { name: "PAPERBOX", unit: "Box", min: 1, max: 2 },
+                { name: "PAPERTRAY", unit: "Box", min: 1, max: 2 },
+                { name: "PLASTIK UKURAN S", unit: "Bks", min: 3, max: 6 },
+                { name: "PLASTIK UKURAN M", unit: "Bks", min: 3, max: 6 },
+                { name: "PLASTIK UKURAN L", unit: "Bks", min: 3, max: 6 },
+                { name: "PLASTIK UKURAN 20", unit: "Bks", min: 3, max: 6 },
+                { name: "PLASTIK UKURAN 25", unit: "Bks", min: 3, max: 6 },
+                { name: "SEDOTAN", unit: "Bks", min: 1, max: 2 },
+                { name: "SEDOTAN PANAS", unit: "Bks", min: 1, max: 2 },
+                { name: "SUMPIT", unit: "Bks", min: 5, max: 10 },
+                { name: "SENDOK PLASTIK", unit: "Bks", min: 5, max: 10 },
+                { name: "GARPU PLASTIK", unit: "Bks", min: 3, max: 6 },
+                { name: "CUP SAMBAL", unit: "Bks", min: 10, max: 20 },
+                { name: "TUSUK SATE", unit: "Bks", min: 3, max: 6 },
+                { name: "PLASTIK TUSUK SATE", unit: "Bks", min: 3, max: 6 },
+                { name: "TISSUE", unit: "Ball", min: 3, max: 10 },
+                { name: "ISOLASI KERTAS", unit: "Roll", min: 6, max: 12 },
+                { name: "ISOLASI BENING", unit: "Roll", min: 12, max: 24 },
+                { name: "PLASTIK SAMPAH MERAH", unit: "Bks", min: 5, max: 8 },
+                { name: "TRASHBAG HITAM", unit: "Bks", min: 5, max: 8 },
+                { name: "HAND GLOVES", unit: "Box", min: 5, max: 10 },
+                { name: "KAWAT GOSOK", unit: "Gantung", min: 1, max: 2 },
+                { name: "SPONS", unit: "Bks", min: 4, max: 8 },
+                { name: "SUNLIGHT", unit: "Pouch", min: 3, max: 6 },
+                { name: "SUPERPELL", unit: "Bks", min: 3, max: 6 },
+                { name: "DETERGEN", unit: "Bks", min: 3, max: 6 },
+                { name: "HANDWASH", unit: "Bks", min: 6, max: 9 },
+                { name: "KERUPUK", unit: "Ball", min: 6, max: 12 },
+                { name: "MINYAK GORENG", unit: "Dos", min: 3, max: 6 },
+                { name: "HANDSCOON", unit: "Box", min: 1, max: 2 },
+                { name: "KERTAS STRUK", unit: "Bks", min: 3, max: 6 },
+                { name: "KERTAS STRUK EDC", unit: "Bks", min: 1, max: 2 },
+                { name: "VOUCHER 10%", unit: "Box", min: 1, max: 2 },
+                { name: "VOUCHER B1G1", unit: "Box", min: 1, max: 2 }
+            ],
+            "Outlet Faisal": [
+                { name: "AYAM CINCANG", unit: "Bks", min: 3, max: 6 },
+                { name: "TELUR AYAM", unit: "Rak", min: 2, max: 4 },
+                { name: "TELUR REBUS", unit: "Rak", min: 1, max: 3 },
+                { name: "TELUR AYAM KAMPUNG", unit: "Rak", min: 1, max: 2 },
+                { name: "TELUR AYAM KAMPUNG 1/2 MATANG", unit: "Rak", min: 2, max: 4 },
+                { name: "TELUR ASIN", unit: "Rak", min: 2, max: 3 },
+                { name: "BERAS", unit: "Liter", min: 1, max: 1 },
+                { name: "BUBUR KETAN", unit: "Bks", min: 2, max: 6 },
+                { name: "BAWANG MERAH HALUS", unit: "Kg", min: 1, max: 2 },
+                { name: "BAWANG PUTIH HALUS", unit: "Kg", min: 1, max: 2 },
+                { name: "JAHE KUPAS", unit: "Kg", min: 1, max: 2 },
+                { name: "DAUN SOP", unit: "Kg", min: 1, max: 2 },
+                { name: "DAUN BAWANG", unit: "Kg", min: 1, max: 2 },
+                { name: "DAUN SALAM", unit: "Tusuk", min: 2, max: 4 },
+                { name: "JERUK NIPIS HIJAU", unit: "Kg", min: 1, max: 2 },
+                { name: "BAWANG GORENG", unit: "Kg", min: 2, max: 4 },
+                { name: "KECAP MANIS", unit: "Botol", min: 1, max: 2 },
+                { name: "GULA PASIR", unit: "Bks", min: 2, max: 4 },
+                { name: "LADAKU", unit: "Bks", min: 2, max: 4 },
+                { name: "HATI AMPELA MARINASI", unit: "Tusuk", min: 10, max: 20 },
+                { name: "BUMBU MARINASI", unit: "Kg", min: 1, max: 2 },
+                { name: "BUMBU BUBUR", unit: "Bks", min: 3, max: 6 },
+                { name: "BUMBU CIRENG", unit: "Bks", min: 2, max: 4 },
+                { name: "BUMBU KUAH BATAGOR", unit: "Bks", min: 1, max: 2 },
+                { name: "SAMBAL REBUS", unit: "Bks", min: 2, max: 4 },
+                { name: "SAMBAL DIMSUM", unit: "Bks", min: 1, max: 2 },
+                { name: "SAMBAL KAKU", unit: "Bks", min: 2, max: 4 },
+                { name: "AIR GULA", unit: "Kg", min: 1, max: 2 },
+                { name: "BIANG TEH", unit: "Kg", min: 1, max: 2 },
+                { name: "BIANG TEH TARIK", unit: "Kg", min: 1, max: 2 },
+                { name: "BIANG KOPI SUSU", unit: "Kg", min: 1, max: 2 },
+                { name: "ESPRESSO", unit: "Liter", min: 2, max: 4 },
+                { name: "DIMSUM FROZEN", unit: "Box", min: 2, max: 4 },
+                { name: "BAKSO FROZEN", unit: "Bks", min: 2, max: 4 },
+                { name: "PANGSIT FROZEN", unit: "Mika", min: 2, max: 4 },
+                { name: "TAHU FROZEN", unit: "Bks", min: 2, max: 4 },
+                { name: "ROTI KUKUS", unit: "Bks", min: 5, max: 10 },
+                { name: "SELAI KAYA", unit: "Botol", min: 4, max: 8 },
+                { name: "SELAI KAYA PANDAN", unit: "Bks", min: 3, max: 6 },
+                { name: "SELAI THAITEA", unit: "Bks", min: 2, max: 4 },
+                { name: "SELAI COKLAT", unit: "Bks", min: 0, max: 0 },
+                { name: "SUSU CAIR", unit: "Kotak", min: 4, max: 8 },
+                { name: "AREN CAIR", unit: "Liter", min: 1, max: 3 },
+                { name: "SKM", unit: "Kaleng", min: 3, max: 6 },
+                { name: "CREAMER", unit: "Kotak", min: 2, max: 4 },
+                { name: "MAXTEA", unit: "Bks", min: 1, max: 2 },
+                { name: "CHAMPION COKLAT", unit: "Bks", min: 1, max: 2 },
+                { name: "TEH TONGJIE", unit: "Kotak", min: 1, max: 2 },
+                { name: "TEH GM", unit: "Bks", min: 1, max: 2 },
+                { name: "TEH BOTOL", unit: "Bks", min: 1, max: 2 },
+                { name: "AIR MINERAL", unit: "Ball", min: 4, max: 8 },
+                { name: "GALON", unit: "Galon", min: 4, max: 8 },
+                { name: "GULA SACHET", unit: "Bks", min: 1, max: 2 },
+                { name: "ES CUP", unit: "Bks", min: 2, max: 4 },
+                { name: "PAPERCUP", unit: "Bks", min: 1, max: 2 },
+                { name: "KEMASAN 1", unit: "Bks", min: 3, max: 6 },
+                { name: "KEMASAN 2", unit: "Bks", min: 1, max: 2 },
+                { name: "PLASTIK SEALER", unit: "Roll", min: 1, max: 2 },
+                { name: "PAPERBAG", unit: "Bks", min: 3, max: 6 },
+                { name: "PAPERBOWL", unit: "Bks", min: 5, max: 10 },
+                { name: "PIRING DIMSUM", unit: "Bks", min: 4, max: 8 },
+                { name: "PAPERBOX", unit: "Box", min: 1, max: 2 },
+                { name: "PAPERTRAY", unit: "Box", min: 1, max: 2 },
+                { name: "PLASTIK UKURAN S", unit: "Bks", min: 1, max: 2 },
+                { name: "PLASTIK UKURAN M", unit: "Bks", min: 1, max: 2 },
+                { name: "PLASTIK UKURAN L", unit: "Bks", min: 1, max: 2 },
+                { name: "PLASTIK UKURAN 20", unit: "Bks", min: 1, max: 2 },
+                { name: "PLASTIK UKURAN 25", unit: "Bks", min: 1, max: 2 },
+                { name: "SEDOTAN", unit: "Bks", min: 1, max: 2 },
+                { name: "SEDOTAN PANAS", unit: "Bks", min: 1, max: 1 },
+                { name: "SUMPIT", unit: "Bks", min: 2, max: 4 },
+                { name: "SENDOK PLASTIK", unit: "Bks", min: 2, max: 4 },
+                { name: "GARPU PLASTIK", unit: "Bks", min: 1, max: 2 },
+                { name: "CUP SAMBAL", unit: "Bks", min: 5, max: 10 },
+                { name: "TUSUK SATE", unit: "Bks", min: 2, max: 4 },
+                { name: "PLASTIK TUSUK SATE", unit: "Bks", min: 2, max: 4 },
+                { name: "TISSUE", unit: "Ball", min: 3, max: 6 },
+                { name: "ISOLASI KERTAS", unit: "Roll", min: 2, max: 4 },
+                { name: "ISOLASI BENING", unit: "Roll", min: 5, max: 10 },
+                { name: "PLASTIK SAMPAH MERAH", unit: "Bks", min: 2, max: 4 },
+                { name: "TRASHBAG HITAM", unit: "Bks", min: 2, max: 4 },
+                { name: "HAND GLOVES", unit: "Box", min: 1, max: 2 },
+                { name: "KAWAT GOSOK", unit: "Gantung", min: 1, max: 2 },
+                { name: "SPONS", unit: "Bks", min: 2, max: 4 },
+                { name: "SUNLIGHT", unit: "Pouch", min: 1, max: 2 },
+                { name: "SUPERPELL", unit: "Bks", min: 1, max: 2 },
+                { name: "DETERGEN", unit: "Bks", min: 1, max: 2 },
+                { name: "HANDWASH", unit: "Bks", min: 1, max: 2 },
+                { name: "KERUPUK", unit: "Ball", min: 3, max: 6 },
+                { name: "MINYAK GORENG", unit: "Dos", min: 1, max: 2 },
+                { name: "HANDSCOON", unit: "Box", min: 1, max: 2 },
+                { name: "KERTAS STRUK", unit: "Bks", min: 4, max: 8 },
+                { name: "KERTAS STRUK EDC", unit: "Bks", min: 1, max: 2 },
+                { name: "VOUCHER 10%", unit: "Box", min: 1, max: 2 },
+                { name: "VOUCHER B1G1", unit: "Box", min: 1, max: 2 }
+            ],
+            "Outlet BTP": [
+                { name: "AYAM CINCANG", unit: "Bks", min: 3, max: 6 },
+                { name: "TELUR AYAM", unit: "Rak", min: 2, max: 5 },
+                { name: "TELUR REBUS", unit: "Rak", min: 2, max: 3 },
+                { name: "TELUR AYAM KAMPUNG", unit: "Rak", min: 1, max: 2 },
+                { name: "TELUR AYAM KAMPUNG 1/2 MATANG", unit: "Rak", min: 1, max: 2 },
+                { name: "TELUR ASIN", unit: "Rak", min: 2, max: 3 },
+                { name: "BERAS", unit: "Liter", min: 1, max: 1 },
+                { name: "BUBUR KETAN", unit: "Bks", min: 2, max: 6 },
+                { name: "BAWANG MERAH HALUS", unit: "Kg", min: 1, max: 2 },
+                { name: "BAWANG PUTIH HALUS", unit: "Kg", min: 1, max: 2 },
+                { name: "JAHE KUPAS", unit: "Kg", min: 1, max: 2 },
+                { name: "DAUN SOP", unit: "Kg", min: 1, max: 2 },
+                { name: "DAUN BAWANG", unit: "Kg", min: 1, max: 2 },
+                { name: "DAUN SALAM", unit: "Tusuk", min: 2, max: 4 },
+                { name: "JERUK NIPIS HIJAU", unit: "Kg", min: 1, max: 2 },
+                { name: "BAWANG GORENG", unit: "Kg", min: 2, max: 4 },
+                { name: "KECAP MANIS", unit: "Botol", min: 1, max: 2 },
+                { name: "GULA PASIR", unit: "Bks", min: 2, max: 4 },
+                { name: "LADAKU", unit: "Bks", min: 2, max: 4 },
+                { name: "HATI AMPELA MARINASI", unit: "Tusuk", min: 10, max: 20 },
+                { name: "BUMBU MARINASI", unit: "Kg", min: 1, max: 2 },
+                { name: "BUMBU BUBUR", unit: "Bks", min: 3, max: 6 },
+                { name: "BUMBU CIRENG", unit: "Bks", min: 2, max: 4 },
+                { name: "BUMBU KUAH BATAGOR", unit: "Bks", min: 1, max: 2 },
+                { name: "SAMBAL REBUS", unit: "Bks", min: 2, max: 4 },
+                { name: "SAMBAL DIMSUM", unit: "Bks", min: 1, max: 2 },
+                { name: "SAMBAL KAKU", unit: "Bks", min: 2, max: 4 },
+                { name: "AIR GULA", unit: "Kg", min: 1, max: 2 },
+                { name: "BIANG TEH", unit: "Kg", min: 1, max: 2 },
+                { name: "BIANG TEH TARIK", unit: "Kg", min: 1, max: 2 },
+                { name: "BIANG KOPI SUSU", unit: "Kg", min: 1, max: 2 },
+                { name: "ESPRESSO", unit: "Liter", min: 2, max: 4 },
+                { name: "DIMSUM FROZEN", unit: "Box", min: 2, max: 4 },
+                { name: "BAKSO FROZEN", unit: "Bks", min: 2, max: 4 },
+                { name: "PANGSIT FROZEN", unit: "Mika", min: 2, max: 4 },
+                { name: "TAHU FROZEN", unit: "Bks", min: 2, max: 4 },
+                { name: "ROTI KUKUS", unit: "Bks", min: 5, max: 10 },
+                { name: "SELAI KAYA", unit: "Botol", min: 4, max: 8 },
+                { name: "SELAI KAYA PANDAN", unit: "Bks", min: 3, max: 6 },
+                { name: "SELAI THAITEA", unit: "Bks", min: 2, max: 4 },
+                { name: "SELAI COKLAT", unit: "Bks", min: 0, max: 0 },
+                { name: "SUSU CAIR", unit: "Kotak", min: 4, max: 8 },
+                { name: "AREN CAIR", unit: "Liter", min: 1, max: 3 },
+                { name: "SKM", unit: "Kaleng", min: 3, max: 6 },
+                { name: "CREAMER", unit: "Kotak", min: 2, max: 4 },
+                { name: "MAXTEA", unit: "Bks", min: 1, max: 2 },
+                { name: "CHAMPION COKLAT", unit: "Bks", min: 1, max: 2 },
+                { name: "TEH TONGJIE", unit: "Kotak", min: 1, max: 2 },
+                { name: "TEH GM", unit: "Bks", min: 1, max: 2 },
+                { name: "TEH BOTOL", unit: "Bks", min: 1, max: 2 },
+                { name: "AIR MINERAL", unit: "Ball", min: 4, max: 8 },
+                { name: "GALON", unit: "Galon", min: 4, max: 8 },
+                { name: "GULA SACHET", unit: "Bks", min: 1, max: 2 },
+                { name: "ES CUP", unit: "Bks", min: 2, max: 4 },
+                { name: "PAPERCUP", unit: "Bks", min: 1, max: 2 },
+                { name: "KEMASAN 1", unit: "Bks", min: 3, max: 6 },
+                { name: "KEMASAN 2", unit: "Bks", min: 1, max: 2 },
+                { name: "PLASTIK SEALER", unit: "Roll", min: 1, max: 2 },
+                { name: "PAPERBAG", unit: "Bks", min: 3, max: 6 },
+                { name: "PAPERBOWL", unit: "Bks", min: 5, max: 10 },
+                { name: "PIRING DIMSUM", unit: "Bks", min: 4, max: 8 },
+                { name: "PAPERBOX", unit: "Box", min: 1, max: 2 },
+                { name: "PAPERTRAY", unit: "Box", min: 1, max: 2 },
+                { name: "PLASTIK UKURAN S", unit: "Bks", min: 1, max: 2 },
+                { name: "PLASTIK UKURAN M", unit: "Bks", min: 1, max: 2 },
+                { name: "PLASTIK UKURAN L", unit: "Bks", min: 1, max: 2 },
+                { name: "PLASTIK UKURAN 20", unit: "Bks", min: 1, max: 2 },
+                { name: "PLASTIK UKURAN 25", unit: "Bks", min: 1, max: 2 },
+                { name: "SEDOTAN", unit: "Bks", min: 1, max: 2 },
+                { name: "SEDOTAN PANAS", unit: "Bks", min: 1, max: 1 },
+                { name: "SUMPIT", unit: "Bks", min: 2, max: 4 },
+                { name: "SENDOK PLASTIK", unit: "Bks", min: 2, max: 4 },
+                { name: "GARPU PLASTIK", unit: "Bks", min: 1, max: 2 },
+                { name: "CUP SAMBAL", unit: "Bks", min: 5, max: 10 },
+                { name: "TUSUK SATE", unit: "Bks", min: 2, max: 4 },
+                { name: "PLASTIK TUSUK SATE", unit: "Bks", min: 2, max: 4 },
+                { name: "TISSUE", unit: "Ball", min: 3, max: 6 },
+                { name: "ISOLASI KERTAS", unit: "Roll", min: 2, max: 4 },
+                { name: "ISOLASI BENING", unit: "Roll", min: 5, max: 10 },
+                { name: "PLASTIK SAMPAH MERAH", unit: "Bks", min: 2, max: 4 },
+                { name: "TRASHBAG HITAM", unit: "Bks", min: 2, max: 4 },
+                { name: "HAND GLOVES", unit: "Box", min: 1, max: 2 },
+                { name: "KAWAT GOSOK", unit: "Gantung", min: 1, max: 2 },
+                { name: "SPONS", unit: "Bks", min: 2, max: 4 },
+                { name: "SUNLIGHT", unit: "Pouch", min: 1, max: 2 },
+                { name: "SUPERPELL", unit: "Bks", min: 1, max: 2 },
+                { name: "DETERGEN", unit: "Bks", min: 1, max: 2 },
+                { name: "HANDWASH", unit: "Bks", min: 1, max: 2 },
+                { name: "KERUPUK", unit: "Ball", min: 3, max: 6 },
+                { name: "MINYAK GORENG", unit: "Dos", min: 1, max: 2 },
+                { name: "HANDSCOON", unit: "Box", min: 1, max: 2 },
+                { name: "KERTAS STRUK", unit: "Bks", min: 4, max: 8 },
+                { name: "KERTAS STRUK EDC", unit: "Bks", min: 1, max: 2 },
+                { name: "VOUCHER 10%", unit: "Box", min: 1, max: 2 },
+                { name: "VOUCHER B1G1", unit: "Box", min: 1, max: 2 }
+            ]
+        };
+
+        // Standard Units Options
+        const standardUnits = ['Kg', 'Gr', 'Bks', 'Pcs', 'Botol', 'Kotak', 'Liter', 'Roll', 'Ikat', 'Box', 'Dos', 'Rak', 'Butir', 'mL', 'Mika', 'Tusuk', 'Pasang', 'Karung', 'Kaleng', 'Bal'];
+
+        // Storage Data Permintaan & Bahan Masuk
+        let requisitions = JSON.parse(localStorage.getItem('requisitions_data') || '[]');
+        let incomingGoods = JSON.parse(localStorage.getItem('incoming_goods_data') || '[]');
+        
+        let rowCounter = 0;
+        let inRowCounter = 0;
+        let activeTab = 'form';
+
+        window.onload = function() {
+            document.getElementById('tanggalPermintaan').valueAsDate = new Date();
+            document.getElementById('inTanggalMasuk').valueAsDate = new Date();
+            
+            addItemRow();
+            addItemRow();
+
+            addInItemRow();
+            addInItemRow();
+
+            renderCatalogModalItems();
+            renderHistoryTable();
+            renderBufferTable();
+
+            generateDocNumber();
+            generateInDocNumber();
+
+            window.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    closePrintModal();
+                    closeCatalogModal();
+                }
+            });
+        };
+
+        function switchTab(tab) {
+            activeTab = tab;
+            const formSec = document.getElementById('section-form');
+            const masukSec = document.getElementById('section-masuk');
+            const bufferSec = document.getElementById('section-buffer');
+            const historySec = document.getElementById('section-history');
+
+            const btnForm = document.getElementById('tab-btn-form');
+            const btnMasuk = document.getElementById('tab-btn-masuk');
+            const btnBuffer = document.getElementById('tab-btn-buffer');
+            const btnHistory = document.getElementById('tab-btn-history');
+
+            const activeClass = 'py-2.5 px-4 font-semibold text-sm rounded-t-lg transition flex items-center gap-2 bg-white border-t border-x border-slate-200 border-b-2 shadow-sm whitespace-nowrap';
+            const inactiveClass = 'py-2.5 px-4 font-semibold text-sm rounded-t-lg transition flex items-center gap-2 text-slate-500 hover:bg-slate-100 whitespace-nowrap';
+
+            formSec.classList.add('hidden');
+            masukSec.classList.add('hidden');
+            bufferSec.classList.add('hidden');
+            historySec.classList.add('hidden');
+
+            btnForm.className = inactiveClass + ' hover:text-indigo-600';
+            btnMasuk.className = inactiveClass + ' hover:text-emerald-600';
+            btnBuffer.className = inactiveClass + ' hover:text-amber-600';
+            btnHistory.className = inactiveClass + ' hover:text-indigo-600';
+
+            if (tab === 'form') {
+                formSec.classList.remove('hidden');
+                btnForm.className = activeClass + ' text-indigo-600 border-b-indigo-600';
+            } else if (tab === 'masuk') {
+                masukSec.classList.remove('hidden');
+                btnMasuk.className = activeClass + ' text-emerald-600 border-b-emerald-600';
+            } else if (tab === 'buffer') {
+                bufferSec.classList.remove('hidden');
+                btnBuffer.className = activeClass + ' text-amber-600 border-b-amber-600';
+                renderBufferTable();
+            } else {
+                historySec.classList.remove('hidden');
+                btnHistory.className = activeClass + ' text-indigo-600 border-b-indigo-600';
+                renderHistoryTable();
+            }
+        }
+
+        function handleAreaChange() {
+            const area = document.getElementById('areaPemohon').value;
+            const tujuanSelect = document.getElementById('tujuanPermintaan');
+
+            if (area === 'Dapur Utama' || area === 'Gudang') {
+                tujuanSelect.value = 'Supplier';
+            } else if (area === 'Outlet Faisal' || area === 'Outlet BTP') {
+                tujuanSelect.value = 'Dapur Utama';
+            }
+        }
+
+        function generateDocNumber() {
+            const year = new Date().getFullYear();
+            const count = String(requisitions.length + 1).padStart(4, '0');
+            const docNum = `REQ-${year}-${count}`;
+            document.getElementById('docNumberDisplay').textContent = docNum;
+            return docNum;
+        }
+
+        function generateInDocNumber() {
+            const year = new Date().getFullYear();
+            const count = String(incomingGoods.length + 1).padStart(4, '0');
+            const docNum = `IN-${year}-${count}`;
+            document.getElementById('inDocNumberDisplay').textContent = docNum;
+            return docNum;
+        }
+
+        function handleItemInput(inputEl) {
+            const query = inputEl.value.trim().toLowerCase();
+            const wrapper = inputEl.closest('.autocomplete-wrapper');
+            const suggestionsBox = wrapper.querySelector('.autocomplete-suggestions');
+
+            if (query.length < 1) {
+                suggestionsBox.classList.add('hidden');
+                suggestionsBox.innerHTML = '';
+                return;
+            }
+
+            const matches = sampleCatalog.filter(c => c.name.toLowerCase().includes(query)).slice(0, 7);
+
+            if (matches.length === 0) {
+                suggestionsBox.classList.add('hidden');
+                suggestionsBox.innerHTML = '';
+                return;
+            }
+
+            // Get selected area for buffer stock lookup
+            const selectedArea = activeTab === 'masuk' 
+                ? (document.getElementById('inAreaPenerima')?.value || '')
+                : (document.getElementById('areaPemohon')?.value || '');
+
+            suggestionsBox.innerHTML = matches.map(item => {
+                let bufferInfo = '';
+                if (selectedArea && bufferStockMaster[selectedArea]) {
+                    const foundBuf = bufferStockMaster[selectedArea].find(b => b.name.toLowerCase() === item.name.toLowerCase());
+                    if (foundBuf) {
+                        bufferInfo = `<span class="text-[9px] bg-amber-100 text-amber-900 px-1.5 py-0.5 rounded font-bold ml-1">Buf: ${foundBuf.min}-${foundBuf.max}</span>`;
+                    }
+                }
+
+                return `
+                <div onclick="applySuggestion(this, '${item.name.replace(/'/g, "\\'")}', '${item.unit.replace(/'/g, "\\'")}')" class="px-3 py-2 hover:bg-indigo-50 cursor-pointer flex justify-between items-center transition">
+                    <span class="font-medium text-slate-800">${item.name} ${bufferInfo}</span>
+                    <span class="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded border border-slate-200">${item.unit}</span>
+                </div>
+                `;
+            }).join('');
+
+            suggestionsBox.classList.remove('hidden');
+        }
+
+        function applySuggestion(el, name, defaultUnit) {
+            const tr = el.closest('tr');
+            if (tr) {
+                const nameInput = tr.querySelector('.item-name');
+                if (nameInput) nameInput.value = name;
+
+                const unitSelect = tr.querySelector('.item-unit');
+                if (unitSelect) {
+                    const cleanUnit = defaultUnit.split(' ')[0];
+                    let found = false;
+                    for (let opt of unitSelect.options) {
+                        if (opt.value.toLowerCase() === cleanUnit.toLowerCase()) {
+                            opt.selected = true;
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found && cleanUnit) {
+                        const newOpt = new Option(cleanUnit, cleanUnit, true, true);
+                        unitSelect.add(newOpt);
+                    }
+                }
+            }
+
+            const suggestionsBox = el.closest('.autocomplete-suggestions');
+            if (suggestionsBox) {
+                suggestionsBox.classList.add('hidden');
+            }
+        }
+
+        function renderBufferTable() {
+            const tbody = document.getElementById('bufferTableBody');
+            const searchVal = (document.getElementById('bufferSearch')?.value || '').toLowerCase();
+            const areaFilter = document.getElementById('bufferAreaFilter')?.value || 'ALL';
+
+            tbody.innerHTML = '';
+
+            let allRows = [];
+            let duCount = bufferStockMaster["Dapur Utama"].length;
+            let gudangCount = bufferStockMaster["Gudang"].length;
+            let outletCount = bufferStockMaster["Outlet Faisal"].length + bufferStockMaster["Outlet BTP"].length;
+
+            Object.keys(bufferStockMaster).forEach(area => {
+                if (areaFilter === 'ALL' || areaFilter === area) {
+                    bufferStockMaster[area].forEach(item => {
+                        allRows.push({ ...item, area });
+                    });
+                }
+            });
+
+            if (searchVal) {
+                allRows = allRows.filter(r => 
+                    r.name.toLowerCase().includes(searchVal) || 
+                    r.area.toLowerCase().includes(searchVal) ||
+                    r.unit.toLowerCase().includes(searchVal)
+                );
+            }
+
+            // Update stats counter
+            let grandTotal = bufferStockMaster["Dapur Utama"].length + bufferStockMaster["Gudang"].length + bufferStockMaster["Outlet Faisal"].length + bufferStockMaster["Outlet BTP"].length;
+            document.getElementById('bufferCount').textContent = grandTotal;
+            document.getElementById('statBufferTotal').textContent = grandTotal;
+            document.getElementById('statBufferDU').textContent = duCount;
+            document.getElementById('statBufferGudang').textContent = gudangCount;
+            document.getElementById('statBufferOutlet').textContent = outletCount;
+
+            if (allRows.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-xs text-slate-400">Tidak ada data buffer stok yang cocok.</td></tr>`;
+                return;
+            }
+
+            allRows.forEach((row, idx) => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50 transition text-xs';
+
+                let areaBadgeClass = 'bg-slate-100 text-slate-700';
+                if (row.area === 'Dapur Utama') areaBadgeClass = 'bg-indigo-100 text-indigo-800 font-bold';
+                else if (row.area === 'Gudang') areaBadgeClass = 'bg-emerald-100 text-emerald-800 font-bold';
+                else if (row.area.includes('Outlet')) areaBadgeClass = 'bg-amber-100 text-amber-900 font-bold';
+
+                tr.innerHTML = `
+                    <td class="p-3 text-center text-slate-400 font-semibold">${idx + 1}</td>
+                    <td class="p-3 font-bold text-slate-800">${row.name}</td>
+                    <td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] ${areaBadgeClass}">${row.area}</span></td>
+                    <td class="p-3 text-center font-medium text-slate-600">${row.unit}</td>
+                    <td class="p-3 text-center font-bold text-rose-600 bg-rose-50/50 rounded">${row.min}</td>
+                    <td class="p-3 text-center font-bold text-emerald-600 bg-emerald-50/50 rounded">${row.max}</td>
+                    <td class="p-3 text-center space-x-1">
+                        <button onclick="useBufferInForm('${row.name.replace(/'/g, "\\'")}', '${row.unit.replace(/'/g, "\\'")}', '${row.area}', 'form')" class="px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold text-[10px] rounded border border-indigo-200 transition" title="+ Minta Barang Ini">
+                            + Permintaan
+                        </button>
+                        <button onclick="useBufferInForm('${row.name.replace(/'/g, "\\'")}', '${row.unit.replace(/'/g, "\\'")}', '${row.area}', 'masuk')" class="px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-semibold text-[10px] rounded border border-emerald-200 transition" title="+ Input Barang Masuk">
+                            + Masuk
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function useBufferInForm(name, unit, area, targetTab) {
+            switchTab(targetTab);
+            if (targetTab === 'masuk') {
+                const areaSelect = document.getElementById('inAreaPenerima');
+                if (areaSelect) {
+                    for (let opt of areaSelect.options) {
+                        if (opt.value.toLowerCase().includes(area.toLowerCase()) || area.toLowerCase().includes(opt.value.toLowerCase())) {
+                            opt.selected = true;
+                            break;
+                        }
+                    }
+                }
+                addInItemRow(name, unit);
+            } else {
+                const areaSelect = document.getElementById('areaPemohon');
+                if (areaSelect) {
+                    for (let opt of areaSelect.options) {
+                        if (opt.value.toLowerCase().includes(area.toLowerCase()) || area.toLowerCase().includes(opt.value.toLowerCase())) {
+                            opt.selected = true;
+                            handleAreaChange();
+                            break;
+                        }
+                    }
+                }
+                addItemRow(name, unit);
+            }
+            showToast(`Menambahkan ${name} ke ${targetTab === 'masuk' ? 'Form Bahan Masuk' : 'Form Permintaan'}`, 'success');
+        }
+
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.autocomplete-wrapper')) {
+                document.querySelectorAll('.autocomplete-suggestions').forEach(box => box.classList.add('hidden'));
+            }
+        });
+
+        function addItemRow(itemName = '', defaultUnit = '') {
+            rowCounter++;
+            const tbody = document.getElementById('itemsTableBody');
+            const tr = document.createElement('tr');
+            tr.id = `item-row-${rowCounter}`;
+            tr.className = 'hover:bg-slate-50/80 transition';
+
+            let unitOptionsHtml = standardUnits.map(u => 
+                `<option value="${u}" ${u.toLowerCase() === defaultUnit.toLowerCase() ? 'selected' : ''}>${u}</option>`
+            ).join('');
+
+            tr.innerHTML = `
+                <td class="p-3 text-center text-xs text-slate-400 font-semibold row-number"></td>
+                <td class="p-3 relative">
+                    <div class="relative autocomplete-wrapper">
+                        <input type="text" required placeholder="Ketik nama bahan (cth: Ayam, Telur, Bumbu)..." value="${itemName}" oninput="handleItemInput(this)" onfocus="handleItemInput(this)" autocomplete="off" class="item-name w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-indigo-500">
+                        <div class="autocomplete-suggestions hidden absolute left-0 right-0 top-full mt-1 bg-white border border-indigo-200 rounded-lg shadow-xl z-50 max-h-52 overflow-y-auto divide-y divide-slate-100 text-xs"></div>
+                    </div>
+                </td>
+                <td class="p-3">
+                    <input type="number" step="any" min="0.1" required placeholder="0" class="item-qty w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs font-bold text-center text-indigo-900 focus:ring-2 focus:ring-indigo-500">
+                </td>
+                <td class="p-3">
+                    <select required class="item-unit w-full bg-white border border-slate-300 rounded-lg px-2 py-1.5 text-xs focus:ring-2 focus:ring-indigo-500">
+                        ${unitOptionsHtml}
+                    </select>
+                </td>
+                <td class="p-3">
+                    <input type="text" placeholder="Catatan merek/ukuran..." class="item-notes w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-indigo-500">
+                </td>
+                <td class="p-3 text-center">
+                    <button type="button" onclick="removeItemRow(${rowCounter})" class="text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition" title="Hapus Baris">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                </td>
+            `;
+
+            tbody.appendChild(tr);
+            updateRowNumbers();
+        }
+
+        function updateRowNumbers() {
+            const rows = document.querySelectorAll('#itemsTableBody tr');
+            rows.forEach((tr, index) => {
+                const numTd = tr.querySelector('.row-number');
+                if (numTd) numTd.textContent = index + 1;
+            });
+            document.getElementById('itemRowCount').textContent = rows.length;
+        }
+
+        function removeItemRow(id) {
+            const row = document.getElementById(`item-row-${id}`);
+            if (row) {
+                row.remove();
+                updateRowNumbers();
+            }
+        }
+
+        function addInItemRow(itemName = '', defaultUnit = '') {
+            inRowCounter++;
+            const tbody = document.getElementById('inItemsTableBody');
+            const tr = document.createElement('tr');
+            tr.id = `in-item-row-${inRowCounter}`;
+            tr.className = 'hover:bg-slate-50/80 transition';
+
+            let unitOptionsHtml = standardUnits.map(u => 
+                `<option value="${u}" ${u.toLowerCase() === defaultUnit.toLowerCase() ? 'selected' : ''}>${u}</option>`
+            ).join('');
+
+            tr.innerHTML = `
+                <td class="p-3 text-center text-xs text-slate-400 font-semibold in-row-number"></td>
+                <td class="p-3 relative">
+                    <div class="relative autocomplete-wrapper">
+                        <input type="text" required placeholder="Ketik nama bahan (cth: Ayam, Telur)..." value="${itemName}" oninput="handleItemInput(this)" onfocus="handleItemInput(this)" autocomplete="off" class="item-name w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-emerald-500">
+                        <div class="autocomplete-suggestions hidden absolute left-0 right-0 top-full mt-1 bg-white border border-emerald-200 rounded-lg shadow-xl z-50 max-h-52 overflow-y-auto divide-y divide-slate-100 text-xs"></div>
+                    </div>
+                </td>
+                <td class="p-3">
+                    <input type="number" step="any" min="0.1" required placeholder="0" class="item-qty w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs font-bold text-center text-emerald-800 focus:ring-2 focus:ring-emerald-500">
+                </td>
+                <td class="p-3">
+                    <select required class="item-unit w-full bg-white border border-slate-300 rounded-lg px-2 py-1.5 text-xs focus:ring-2 focus:ring-emerald-500">
+                        ${unitOptionsHtml}
+                    </select>
+                </td>
+                <td class="p-3">
+                    <select class="item-condition w-full bg-white border border-slate-300 rounded-lg px-2 py-1.5 text-xs focus:ring-2 focus:ring-emerald-500">
+                        <option value="Sesuai & Baik">Sesuai & Baik</option>
+                        <option value="Ada Rusak/Basi">Ada Rusak/Basi</option>
+                        <option value="Kurang dari Order">Jumlah Kurang</option>
+                        <option value="Kemasan Rusak">Kemasan Rusak</option>
+                    </select>
+                </td>
+                <td class="p-3">
+                    <input type="text" placeholder="Keterangan kondisi/merek..." class="item-notes w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-emerald-500">
+                </td>
+                <td class="p-3 text-center">
+                    <button type="button" onclick="removeInItemRow(${inRowCounter})" class="text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition" title="Hapus Baris">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                </td>
+            `;
+
+            tbody.appendChild(tr);
+            updateInRowNumbers();
+        }
+
+        function updateInRowNumbers() {
+            const rows = document.querySelectorAll('#inItemsTableBody tr');
+            rows.forEach((tr, index) => {
+                const numTd = tr.querySelector('.in-row-number');
+                if (numTd) numTd.textContent = index + 1;
+            });
+            document.getElementById('inItemRowCount').textContent = rows.length;
+        }
+
+        function removeInItemRow(id) {
+            const row = document.getElementById(`in-item-row-${id}`);
+            if (row) {
+                row.remove();
+                updateInRowNumbers();
+            }
+        }
+
+        function handleFormSubmit(e) {
+            e.preventDefault();
+
+            const docNum = document.getElementById('docNumberDisplay').textContent;
+            const area = document.getElementById('areaPemohon').value;
+            const tujuan = document.getElementById('tujuanPermintaan').value;
+            const tanggal = document.getElementById('tanggalPermintaan').value;
+            const namaPemohon = document.getElementById('namaPemohon').value;
+            const catatan = document.getElementById('catatanForm').value;
+
+            const rows = document.querySelectorAll('#itemsTableBody tr');
+            const items = [];
+
+            rows.forEach(tr => {
+                const name = tr.querySelector('.item-name')?.value.trim();
+                const qty = tr.querySelector('.item-qty')?.value;
+                const unit = tr.querySelector('.item-unit')?.value;
+                const notes = tr.querySelector('.item-notes')?.value.trim();
+
+                if (name && qty) {
+                    items.push({ name, qty, unit, notes });
+                }
+            });
+
+            if (items.length === 0) {
+                showToast('Mohon isi sekurang-kurangnya satu item bahan!', 'error');
+                return;
+            }
+
+            const newReq = {
+                id: Date.now(),
+                docNum,
+                type: 'REQ',
+                area,
+                tujuan,
+                tanggal,
+                namaPemohon,
+                catatan,
+                items,
+                createdAt: new Date().toISOString()
+            };
+
+            requisitions.unshift(newReq);
+            localStorage.setItem('requisitions_data', JSON.stringify(requisitions));
+
+            showToast('Dokumen permintaan berhasil dibuat dan disimpan!', 'success');
+            
+            openPrintModal(newReq);
+            resetForm();
+            renderHistoryTable();
+        }
+
+        function handleInFormSubmit(e) {
+            e.preventDefault();
+
+            const docNum = document.getElementById('inDocNumberDisplay').textContent;
+            const area = document.getElementById('inAreaPenerima').value;
+            const sumber = document.getElementById('inSumberBahan').value;
+            const noRef = document.getElementById('inNoRef').value.trim();
+            const tanggal = document.getElementById('inTanggalMasuk').value;
+            const namaPenerima = document.getElementById('inNamaPenerima').value;
+            const catatan = document.getElementById('inCatatan').value;
+
+            const rows = document.querySelectorAll('#inItemsTableBody tr');
+            const items = [];
+
+            rows.forEach(tr => {
+                const name = tr.querySelector('.item-name')?.value.trim();
+                const qty = tr.querySelector('.item-qty')?.value;
+                const unit = tr.querySelector('.item-unit')?.value;
+                const condition = tr.querySelector('.item-condition')?.value;
+                const notes = tr.querySelector('.item-notes')?.value.trim();
+
+                if (name && qty) {
+                    items.push({ name, qty, unit, condition, notes });
+                }
+            });
+
+            if (items.length === 0) {
+                showToast('Mohon isi sekurang-kurangnya satu item bahan masuk!', 'error');
+                return;
+            }
+
+            const newInDoc = {
+                id: Date.now(),
+                docNum,
+                type: 'IN',
+                area,
+                sumber,
+                noRef,
+                tanggal,
+                namaPenerima,
+                catatan,
+                items,
+                createdAt: new Date().toISOString()
+            };
+
+            incomingGoods.unshift(newInDoc);
+            localStorage.setItem('incoming_goods_data', JSON.stringify(incomingGoods));
+
+            showToast('Dokumen penerimaan bahan masuk berhasil disimpan!', 'success');
+            
+            openPrintModal(newInDoc);
+            resetInForm();
+            renderHistoryTable();
+        }
+
+        function resetForm() {
+            document.getElementById('requisitionForm').reset();
+            document.getElementById('itemsTableBody').innerHTML = '';
+            document.getElementById('tanggalPermintaan').valueAsDate = new Date();
+            
+            addItemRow();
+            addItemRow();
+            generateDocNumber();
+        }
+
+        function resetInForm() {
+            document.getElementById('incomingForm').reset();
+            document.getElementById('inItemsTableBody').innerHTML = '';
+            document.getElementById('inTanggalMasuk').valueAsDate = new Date();
+            
+            addInItemRow();
+            addInItemRow();
+            generateInDocNumber();
+        }
+
+        function renderCatalogModalItems() {
+            const grid = document.getElementById('catalogGrid');
+            grid.innerHTML = sampleCatalog.map(item => `
+                <div class="border border-slate-200 rounded-xl p-3 hover:border-indigo-400 hover:shadow-md transition bg-slate-50 flex justify-between items-center">
+                    <div>
+                        <div class="font-bold text-slate-800">${item.name}</div>
+                        <div class="text-[10px] text-slate-500 mt-0.5">Satuan: <span class="font-medium text-slate-700">${item.unit}</span></div>
+                    </div>
+                    <button onclick="selectCatalogItem('${item.name.replace(/'/g, "\\'")}', '${item.unit.replace(/'/g, "\\'")}')" class="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition">
+                        + Pilih
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function filterCatalog() {
+            const q = document.getElementById('catalogSearch').value.toLowerCase();
+            const grid = document.getElementById('catalogGrid');
+            const filtered = sampleCatalog.filter(i => i.name.toLowerCase().includes(q));
+
+            if (filtered.length === 0) {
+                grid.innerHTML = `<div class="col-span-2 p-6 text-center text-slate-400 text-xs">Tidak ada bahan yang sesuai.</div>`;
+                return;
+            }
+
+            grid.innerHTML = filtered.map(item => `
+                <div class="border border-slate-200 rounded-xl p-3 hover:border-indigo-400 hover:shadow-md transition bg-slate-50 flex justify-between items-center">
+                    <div>
+                        <div class="font-bold text-slate-800">${item.name}</div>
+                        <div class="text-[10px] text-slate-500 mt-0.5">Satuan: <span class="font-medium text-slate-700">${item.unit}</span></div>
+                    </div>
+                    <button onclick="selectCatalogItem('${item.name.replace(/'/g, "\\'")}', '${item.unit.replace(/'/g, "\\'")}')" class="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition">
+                        + Pilih
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function selectCatalogItem(name, unit) {
+            if (activeTab === 'masuk') {
+                addInItemRow(name, unit);
+            } else {
+                addItemRow(name, unit);
+            }
+            closeCatalogModal();
+            showToast(`Menambahkan ${name} ke form`, 'success');
+        }
+
+        function openCatalogModal() {
+            document.getElementById('catalogModal').classList.remove('hidden');
+        }
+
+        function closeCatalogModal() {
+            document.getElementById('catalogModal').classList.add('hidden');
+        }
+
+        function renderHistoryTable() {
+            const tbody = document.getElementById('historyTableBody');
+            const searchVal = (document.getElementById('historySearch')?.value || '').toLowerCase();
+            const typeFilter = document.getElementById('historyTypeFilter')?.value || 'ALL';
+            tbody.innerHTML = '';
+
+            const reqList = requisitions.map(r => ({ ...r, type: 'REQ' }));
+            const inList = incomingGoods.map(i => ({ ...i, type: 'IN' }));
+            
+            let combined = [...reqList, ...inList].sort((a, b) => b.id - a.id);
+
+            if (typeFilter !== 'ALL') {
+                combined = combined.filter(c => c.type === typeFilter);
+            }
+
+            if (searchVal) {
+                combined = combined.filter(r => 
+                    r.docNum.toLowerCase().includes(searchVal) || 
+                    r.area.toLowerCase().includes(searchVal) ||
+                    (r.namaPemohon && r.namaPemohon.toLowerCase().includes(searchVal)) ||
+                    (r.namaPenerima && r.namaPenerima.toLowerCase().includes(searchVal))
+                );
+            }
+
+            document.getElementById('historyCount').textContent = requisitions.length + incomingGoods.length;
+
+            if (combined.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="p-6 text-center text-xs text-slate-400">Belum ada dokumen tersimpan.</td></tr>`;
+                return;
+            }
+
+            combined.forEach(r => {
+                const isReq = r.type === 'REQ';
+                const badge = isReq 
+                    ? `<span class="bg-indigo-100 text-indigo-700 text-[10px] font-bold px-2 py-0.5 rounded">Keluar (REQ)</span>`
+                    : `<span class="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded">Masuk (IN)</span>`;
+
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50 transition';
+                tr.innerHTML = `
+                    <td class="p-3 text-xs">${badge}</td>
+                    <td class="p-3 font-mono font-bold ${isReq ? 'text-indigo-600' : 'text-emerald-700'} text-xs">${r.docNum}</td>
+                    <td class="p-3 text-xs text-slate-600">${r.tanggal}</td>
+                    <td class="p-3 text-xs font-semibold text-slate-800">${r.area}</td>
+                    <td class="p-3 text-xs text-slate-600">${isReq ? r.tujuan : r.sumber}</td>
+                    <td class="p-3 text-xs text-slate-600">${r.items.length} Item</td>
+                    <td class="p-3 text-xs text-slate-600">${isReq ? r.namaPemohon : r.namaPenerima}</td>
+                    <td class="p-3 text-center space-x-1">
+                        <button onclick="viewVoucherById(${r.id})" class="px-2.5 py-1 text-[11px] font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition" title="Lihat/Cetak Dokumen">
+                            <i class="fa-solid fa-print mr-1"></i> Cetak
+                        </button>
+                        <button onclick="deleteDocumentById(${r.id})" class="px-2 py-1 text-[11px] font-semibold text-rose-600 hover:bg-rose-50 rounded-lg transition" title="Hapus Dokumen">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function deleteDocumentById(id) {
+            requisitions = requisitions.filter(r => r.id !== id);
+            incomingGoods = incomingGoods.filter(r => r.id !== id);
+            localStorage.setItem('requisitions_data', JSON.stringify(requisitions));
+            localStorage.setItem('incoming_goods_data', JSON.stringify(incomingGoods));
+            renderHistoryTable();
+            showToast('Dokumen berhasil dihapus', 'info');
+        }
+
+        function viewVoucherById(id) {
+            const doc = requisitions.find(r => r.id === id) || incomingGoods.find(r => r.id === id);
+            if (doc) {
+                openPrintModal(doc);
+            }
+        }
+
+        function openPrintModal(req) {
+            const modal = document.getElementById('printModal');
+            const content = document.getElementById('printVoucherContent');
+            const printArea = document.getElementById('printableArea');
+
+            const isReq = !req.type || req.type === 'REQ';
+
+            const itemRowsHtml = req.items.map((it, idx) => `
+                <tr class="border-b border-slate-200 text-xs">
+                    <td class="py-2.5 px-3 text-center text-slate-500">${idx + 1}</td>
+                    <td class="py-2.5 px-3 font-semibold text-slate-800">${it.name}</td>
+                    <td class="py-2.5 px-3 text-center font-bold text-slate-900">${it.qty}</td>
+                    <td class="py-2.5 px-3 text-center text-slate-600">${it.unit}</td>
+                    ${!isReq ? `<td class="py-2.5 px-3 text-center text-xs font-semibold ${it.condition === 'Sesuai & Baik' ? 'text-emerald-700' : 'text-amber-700'}">${it.condition || 'Baik'}</td>` : ''}
+                    <td class="py-2.5 px-3 text-slate-500 italic">${it.notes || '-'}</td>
+                </tr>
+            `).join('');
+
+            const docHtml = `
+                <!-- Kop Surat Restoran -->
+                <div class="border-b-2 border-slate-800 pb-4 flex justify-between items-start">
+                    <div>
+                        <h1 class="text-xl font-black tracking-wider uppercase text-slate-900">${isReq ? 'FORM PERMINTAAN BAHAN' : 'BUKTI PENERIMAAN BAHAN MASUK'}</h1>
+                        <p class="text-xs text-slate-500 font-medium">Sistem Manajemen Stok & Operasional Kuliner</p>
+                    </div>
+                    <div class="text-right">
+                        <span class="inline-block text-xs font-mono font-bold bg-slate-100 border border-slate-300 px-3 py-1 rounded">
+                            ${req.docNum}
+                        </span>
+                        <p class="text-[11px] text-slate-500 mt-1">Tanggal: ${req.tanggal}</p>
+                    </div>
+                </div>
+
+                <!-- Informasi Header -->
+                <div class="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200 text-xs">
+                    <div>
+                        <span class="text-slate-400 uppercase font-bold text-[10px] block">${isReq ? 'Area Pemohon' : 'Area Penerima'}</span>
+                        <span class="font-bold text-slate-800 text-sm">${req.area}</span>
+                    </div>
+                    <div>
+                        <span class="text-slate-400 uppercase font-bold text-[10px] block">${isReq ? 'Tujuan Permintaan' : 'Sumber / Asal Bahan'}</span>
+                        <span class="font-bold ${isReq ? 'text-indigo-700' : 'text-emerald-700'} text-sm">${isReq ? req.tujuan : req.sumber}</span>
+                    </div>
+                    <div>
+                        <span class="text-slate-400 uppercase font-bold text-[10px] block">${isReq ? 'Penanggung Jawab / Pemohon' : 'Petugas Penerima'}</span>
+                        <span class="font-semibold text-slate-800">${isReq ? req.namaPemohon : req.namaPenerima}</span>
+                    </div>
+                    <div>
+                        <span class="text-slate-400 uppercase font-bold text-[10px] block">${isReq ? 'Catatan Tambahan' : 'No. Ref / Surat Jalan'}</span>
+                        <span class="text-slate-700 font-medium">${isReq ? (req.catatan || '-') : (req.noRef || '-')}</span>
+                    </div>
+                </div>
+
+                <!-- Tabel Bahan -->
+                <div>
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">Rincian Daftar Bahan / Barang</h4>
+                    <table class="w-full text-left border-collapse border border-slate-200 rounded-lg overflow-hidden">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-700 text-xs font-bold uppercase border-b border-slate-200">
+                                <th class="py-2 px-3 text-center w-10">#</th>
+                                <th class="py-2 px-3">Nama Bahan / Barang</th>
+                                <th class="py-2 px-3 text-center w-20">Jumlah</th>
+                                <th class="py-2 px-3 text-center w-24">Satuan</th>
+                                ${!isReq ? `<th class="py-2 px-3 text-center w-32">Kondisi</th>` : ''}
+                                <th class="py-2 px-3">Keterangan</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${itemRowsHtml}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Kolom Tanda Tangan 3 Pihak -->
+                <div class="pt-8 grid grid-cols-3 gap-4 text-center text-xs">
+                    <div class="space-y-12">
+                        <p class="text-slate-500 font-medium">${isReq ? 'Pemohon (Area)' : 'Petugas Penerima'}</p>
+                        <p class="font-bold text-slate-800 underline">${isReq ? req.namaPemohon : req.namaPenerima}</p>
+                    </div>
+                    <div class="space-y-12">
+                        <p class="text-slate-500 font-medium">Pemeriksa / Head Area</p>
+                        <p class="font-bold text-slate-800">( ............................ )</p>
+                    </div>
+                    <div class="space-y-12">
+                        <p class="text-slate-500 font-medium">${isReq ? 'Penerima Order' : 'Pengirim / Supplier'}</p>
+                        <p class="font-bold text-slate-800">( ............................ )</p>
+                    </div>
+                </div>
+            `;
+
+            content.innerHTML = docHtml;
+            printArea.innerHTML = docHtml;
+            modal.classList.remove('hidden');
+        }
+
+        function closePrintModal() {
+            document.getElementById('printModal').classList.add('hidden');
+        }
+
+        function handleModalBackdropClick(e) {
+            closePrintModal();
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            
+            const bgClass = type === 'success' ? 'bg-emerald-600' : type === 'error' ? 'bg-rose-600' : 'bg-slate-800';
+            const iconClass = type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle';
+
+            toast.className = `${bgClass} text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-2.5 text-xs font-semibold transform transition-all duration-300 opacity-0 translate-y-2`;
+            toast.innerHTML = `<i class="fa-solid ${iconClass}"></i> <span>${message}</span>`;
+
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.remove('opacity-0', 'translate-y-2');
+            }, 10);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
